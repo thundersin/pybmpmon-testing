@@ -112,6 +112,7 @@ class BatchWriter:
             route.med,
             route.local_pref,
             route.is_withdrawn,
+            route.policy_stage,
             route.evpn_route_type,
             route.evpn_rd,
             route.evpn_esi,
@@ -203,6 +204,7 @@ class BatchWriter:
                     "med",
                     "local_pref",
                     "is_withdrawn",
+                    "policy_stage",
                     "evpn_route_type",
                     "evpn_rd",
                     "evpn_esi",
@@ -230,7 +232,8 @@ class BatchWriter:
                         $13::INTEGER,
                         $14::TEXT,
                         $15::TEXT,
-                        $16::TEXT
+                        $16::TEXT,
+                        $17::TEXT
                     )
                     """,
                     route_tuple[0],  # time
@@ -245,10 +248,11 @@ class BatchWriter:
                     route_tuple[11],  # med
                     route_tuple[12],  # local_pref
                     route_tuple[13],  # is_withdrawn
-                    route_tuple[14],  # evpn_route_type
-                    route_tuple[15],  # evpn_rd
-                    route_tuple[16],  # evpn_esi
-                    route_tuple[17],  # mac_address
+                    route_tuple[14],  # policy_stage
+                    route_tuple[15],  # evpn_route_type
+                    route_tuple[16],  # evpn_rd
+                    route_tuple[17],  # evpn_esi
+                    route_tuple[18],  # mac_address
                 )
 
         elapsed = (asyncio.get_event_loop().time() - start_time) * 1000

@@ -29,6 +29,7 @@ from pybmpmon.protocol.bmp import (
     BMP_HEADER_SIZE,
     BMPMessageType,
     BMPParseError,
+    BMPPeerFlags,
 )
 from pybmpmon.protocol.bmp_parser import (
     parse_bmp_header,
@@ -385,6 +386,7 @@ class BMPListener:
                 med=bgp_update.med,
                 local_pref=bgp_update.local_pref,
                 is_withdrawn=False,
+                policy_stage=("post-policy" if parsed.per_peer_header.peer_flags & BMPPeerFlags.POST_POLICY else "pre-policy"),
                 evpn_route_type=evpn_route_type,
                 evpn_rd=evpn_rd,
                 evpn_esi=evpn_esi,
@@ -427,6 +429,7 @@ class BMPListener:
                 med=None,
                 local_pref=None,
                 is_withdrawn=True,
+                policy_stage=("post-policy" if parsed.per_peer_header.peer_flags & BMPPeerFlags.POST_POLICY else "pre-policy"),
                 evpn_route_type=evpn_route_type,
                 evpn_rd=evpn_rd,
                 evpn_esi=evpn_esi,

@@ -37,6 +37,10 @@ class RouteUpdate(BaseModel):
     med: int | None = Field(None, description="Multi-Exit Discriminator")
     local_pref: int | None = Field(None, description="Local preference")
     is_withdrawn: bool = Field(False, description="Whether route is withdrawn")
+    policy_stage: str = Field(
+    "pre-policy",
+    description="'pre-policy' or 'post-policy', derived from the L flag in the BMP Per-Peer Header",
+    )
 
     # EVPN-specific fields (NULL for IPv4/IPv6)
     evpn_route_type: int | None = Field(None, description="EVPN route type")

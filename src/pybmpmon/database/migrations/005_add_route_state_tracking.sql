@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS route_state (
     -- Current state
     is_withdrawn BOOLEAN NOT NULL DEFAULT FALSE,
 
+    -- Policy view: 'pre-policy' or 'post-policy', derived from the L flag
+    -- (bit 1) in the BMP Per-Peer Header per RFC7854 Section 4.2.
+    -- Part of the route identity below, since pre- and post-policy are
+    -- distinct views of the same prefix (needed to detect policy rejects).
+    policy_stage TEXT NOT NULL DEFAULT 'pre-policy'
+        CHECK (policy_stage IN ('pre-policy', 'post-policy')),
+
     -- Statistics
     learn_count INTEGER NOT NULL DEFAULT 1,  -- Number of times route was learned (advertised)
     withdraw_count INTEGER NOT NULL DEFAULT 0,  -- Number of times route was withdrawn
@@ -38,19 +45,20 @@ CREATE TABLE IF NOT EXISTS route_state (
 );
 
 -- Unique constraints for different route families
--- For IP routes (ipv4_unicast, ipv6_unicast): prefix is the unique identifier
+-- For IP routes (ipv4_unicast, ipv6_unicast): prefix + policy_stage is the unique identifier
 CREATE UNIQUE INDEX IF NOT EXISTS idx_route_state_ip_routes
-ON route_state (bmp_peer_ip, bgp_peer_ip, family, prefix)
+ON route_state (bmp_peer_ip, bgp_peer_ip, family, prefix, policy_stage)
 WHERE family IN ('ipv4_unicast', 'ipv6_unicast') AND prefix IS NOT NULL;
 
--- For EVPN routes: combination of EVPN-specific fields provides uniqueness
+-- For EVPN routes: combination of EVPN-specific fields + policy_stage provides uniqueness
 -- EVPN route uniqueness depends on route type, RD, and other fields
 CREATE UNIQUE INDEX IF NOT EXISTS idx_route_state_evpn_routes
 ON route_state (bmp_peer_ip, bgp_peer_ip, family,
                 COALESCE(evpn_rd, ''),
                 COALESCE(evpn_esi, ''),
                 COALESCE(mac_address, ''),
-                COALESCE(prefix::TEXT, ''))
+                COALESCE(prefix::TEXT, ''),
+                policy_stage)
 WHERE family = 'evpn';
 
 -- Indexes for common queries
@@ -60,6 +68,7 @@ CREATE INDEX IF NOT EXISTS idx_route_state_withdrawn ON route_state (is_withdraw
 CREATE INDEX IF NOT EXISTS idx_route_state_family ON route_state (family);
 CREATE INDEX IF NOT EXISTS idx_route_state_prefix ON route_state (prefix);
 CREATE INDEX IF NOT EXISTS idx_route_state_bmp_peer ON route_state (bmp_peer_ip);
+CREATE INDEX IF NOT EXISTS idx_route_state_policy_stage ON route_state (policy_stage);
 
 -- Index for high-churn routes (learned/withdrawn frequently)
 CREATE INDEX IF NOT EXISTS idx_route_state_churn ON route_state ((learn_count + withdraw_count) DESC)
@@ -80,7 +89,7 @@ CREATE OR REPLACE FUNCTION update_route_state(
     p_med INTEGER,
     p_local_pref INTEGER,
     p_is_withdrawn BOOLEAN,
-    p_rib_policy TEXT,
+    p_policy_stage TEXT,
     p_evpn_route_type INTEGER,
     p_evpn_rd TEXT,
     p_evpn_esi TEXT,
@@ -99,7 +108,8 @@ BEGIN
         WHERE bmp_peer_ip = p_bmp_peer_ip
           AND bgp_peer_ip = p_bgp_peer_ip
           AND family = p_family
-          AND prefix = p_prefix;
+          AND prefix = p_prefix
+          AND policy_stage = p_policy_stage;
     ELSIF p_family = 'evpn' THEN
         SELECT is_withdrawn INTO v_current_withdrawn
         FROM route_state
@@ -109,7 +119,8 @@ BEGIN
           AND COALESCE(evpn_rd, '') = COALESCE(p_evpn_rd, '')
           AND COALESCE(evpn_esi, '') = COALESCE(p_evpn_esi, '')
           AND COALESCE(mac_address, '') = COALESCE(p_mac_address, '')
-          AND COALESCE(prefix::TEXT, '') = COALESCE(p_prefix::TEXT, '');
+          AND COALESCE(prefix::TEXT, '') = COALESCE(p_prefix::TEXT, '')
+          AND policy_stage = p_policy_stage;
     END IF;
 
     -- Determine if state changed
@@ -133,7 +144,8 @@ BEGIN
             WHERE bmp_peer_ip = p_bmp_peer_ip
               AND bgp_peer_ip = p_bgp_peer_ip
               AND family = p_family
-              AND prefix = p_prefix;
+              AND prefix = p_prefix
+              AND policy_stage = p_policy_stage;
         ELSIF p_family = 'evpn' THEN
             UPDATE route_state SET
                 last_seen = p_time,
@@ -157,7 +169,8 @@ BEGIN
               AND COALESCE(evpn_rd, '') = COALESCE(p_evpn_rd, '')
               AND COALESCE(evpn_esi, '') = COALESCE(p_evpn_esi, '')
               AND COALESCE(mac_address, '') = COALESCE(p_mac_address, '')
-              AND COALESCE(prefix::TEXT, '') = COALESCE(p_prefix::TEXT, '');
+              AND COALESCE(prefix::TEXT, '') = COALESCE(p_prefix::TEXT, '')
+              AND policy_stage = p_policy_stage;
         END IF;
     ELSE
         -- Insert new route
@@ -166,6 +179,7 @@ BEGIN
             bgp_peer_ip,
             family,
             prefix,
+            policy_stage,
             first_seen,
             last_seen,
             last_state_change,
@@ -187,6 +201,7 @@ BEGIN
             p_bgp_peer_ip,
             p_family,
             p_prefix,
+            p_policy_stage,
             p_time,
             p_time,
             p_time,

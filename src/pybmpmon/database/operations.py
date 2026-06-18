@@ -179,7 +179,7 @@ async def insert_route_update(pool: asyncpg.Pool, route: RouteUpdate) -> None:
         INSERT INTO {TABLE_ROUTE_UPDATES} (
             time, bmp_peer_ip, bmp_peer_asn, bgp_peer_ip, bgp_peer_asn,
             family, prefix, next_hop, as_path, communities,
-            med, local_pref, is_withdrawn, rib_policy,
+            med, local_pref, is_withdrawn, policy_stage,
             evpn_route_type, evpn_rd, evpn_esi, mac_address
         ) VALUES (
             $1, $2, $3, $4, $5,
@@ -205,7 +205,7 @@ async def insert_route_update(pool: asyncpg.Pool, route: RouteUpdate) -> None:
             route.med,
             route.local_pref,
             route.is_withdrawn,
-            route.rib_policy,
+            route.policy_stage,
             route.evpn_route_type,
             route.evpn_rd,
             route.evpn_esi,

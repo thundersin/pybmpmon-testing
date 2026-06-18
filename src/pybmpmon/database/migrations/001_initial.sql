@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS route_updates (
     med INTEGER,
     local_pref INTEGER,
     is_withdrawn BOOLEAN DEFAULT FALSE,
-    rib_policy TEXT NOT NULL,  -- 'pre-policy', 'post-policy'
+    policy_stage TEXT NOT NULL,  -- 'pre-policy', 'post-policy'
 
     -- EVPN-specific fields (NULL for IPv4/IPv6)
     evpn_route_type INTEGER,
