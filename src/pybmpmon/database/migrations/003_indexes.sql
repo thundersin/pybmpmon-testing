@@ -41,9 +41,13 @@ CREATE INDEX IF NOT EXISTS idx_route_next_hop
     ON route_updates (next_hop)
     WHERE next_hop IS NOT NULL;
 
+CREATE INDEX IF NOT EXISTS idx_route_rib_policy
+    ON route_updates (rib_policy);
+
 -- Peer events lookups
 CREATE INDEX IF NOT EXISTS idx_peer_events_peer
     ON peer_events (peer_ip, time DESC);
 
 CREATE INDEX IF NOT EXISTS idx_peer_events_type
     ON peer_events (event_type, time DESC);
+

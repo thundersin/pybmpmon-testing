@@ -80,6 +80,7 @@ CREATE OR REPLACE FUNCTION update_route_state(
     p_med INTEGER,
     p_local_pref INTEGER,
     p_is_withdrawn BOOLEAN,
+    p_rib_policy TEXT,
     p_evpn_route_type INTEGER,
     p_evpn_rd TEXT,
     p_evpn_esi TEXT,
